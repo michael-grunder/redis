@@ -2091,6 +2091,72 @@ void zinterstoreCommand(redisClient *c) {
     zunionInterGenericCommand(c,c->argv[1], REDIS_OP_INTER);
 }
 
+void zsumscoresCommand(redisClient *c) {
+    robj *key = c->argv[1];
+    robj *zobj;
+    long start, end;
+    int llen, rangelen;
+    double score = 0.0;
+
+    if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != REDIS_OK) ||
+        (getLongFromObjectOrReply(c, c->argv[3], &end, NULL) != REDIS_OK)) return;
+
+    if ((zobj = lookupKeyReadOrReply(c,key,shared.emptymultibulk)) == NULL
+         || checkType(c,zobj,REDIS_ZSET)) return;
+
+    llen = zsetLength(zobj);
+    if (start < 0) start = llen+start;
+    if (end < 0) end = llen+end;
+    if (start < 0) start = 0;
+
+    /* the set is empty, just return zero */
+    if (start > end || start >= llen) {
+        addReplyDouble(c,0);
+        return;
+    }
+
+    if (end >= llen) end = llen-1;
+    rangelen = (end-start)+1;
+
+    if (zobj->encoding == REDIS_ENCODING_ZIPLIST) {
+        unsigned char *zl = zobj->ptr;
+        unsigned char *eptr, *sptr;
+        unsigned char *vstr;
+        unsigned int vlen;
+        long long vlong;
+
+        eptr = ziplistIndex(zl,2*start);
+
+        redisAssertWithInfo(c,zobj,eptr!=NULL);
+        sptr = ziplistNext(zl,eptr);
+
+        while (rangelen--) {
+            redisAssertWithInfo(c,zobj,eptr!=NULL && sptr != NULL);
+            redisAssertWithInfo(c,zobj,ziplistGet(eptr,&vstr,&vlen,&vlong));
+            score += zzlGetScore(sptr);
+            zzlNext(zl,&eptr,&sptr);
+        }
+    } else if (zobj->encoding == REDIS_ENCODING_SKIPLIST) {
+        zset *zs = zobj->ptr;
+        zskiplist *zsl = zs->zsl;
+        zskiplistNode *ln;
+        robj *ele;
+
+        ln = zsl->header->level[0].forward;
+        if (start > 0)
+            ln = zslGetElementByRank(zsl,start+1);
+
+        while (rangelen--) {
+            redisAssertWithInfo(c,zobj,ln != NULL);
+            ele = ln->obj;
+            score += ln->score;
+            ln = ln->level[0].forward;
+        }
+    }
+
+    addReplyDouble(c,score);
+}
+
 void zrangeGenericCommand(redisClient *c, int reverse) {
     robj *key = c->argv[1];
     robj *zobj;

@@ -183,6 +183,7 @@ struct redisCommand redisCommandTable[] = {
     {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
     {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
     {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zsumscores",zsumscoresCommand,4,"r",0,NULL,1,1,1,0,0},
     {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
     {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
     {"zrevrange",zrevrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
