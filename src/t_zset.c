@@ -1171,7 +1171,7 @@ void zsetConvert(robj *zobj, int encoding) {
  *----------------------------------------------------------------------------*/
 
 /* This generic command implements both ZADD and ZINCRBY. */
-void zaddGenericCommand(redisClient *c, int incr) {
+void zaddGenericCommand(redisClient *c, int incr, int nx) {
     static char *nanerr = "resulting score is not a number (NaN)";
     robj *key = c->argv[1];
     robj *ele;
@@ -1221,7 +1221,8 @@ void zaddGenericCommand(redisClient *c, int incr) {
 
             /* Prefer non-encoded element when dealing with ziplists. */
             ele = c->argv[3+j*2];
-            if ((eptr = zzlFind(zobj->ptr,ele,&curscore)) != NULL) {
+            eptr = zzlFind(zobj->ptr,ele,&curscore);
+            if (eptr != NULL && !nx) {
                 if (incr) {
                     score += curscore;
                     if (isnan(score)) {
@@ -1237,7 +1238,7 @@ void zaddGenericCommand(redisClient *c, int incr) {
                     server.dirty++;
                     updated++;
                 }
-            } else {
+            } else if (!eptr) {
                 /* Optimize: check if the element is too large or the list
                  * becomes too long *before* executing zzlInsert. */
                 zobj->ptr = zzlInsert(zobj->ptr,ele,score);
@@ -1255,7 +1256,7 @@ void zaddGenericCommand(redisClient *c, int incr) {
 
             ele = c->argv[3+j*2] = tryObjectEncoding(c->argv[3+j*2]);
             de = dictFind(zs->dict,ele);
-            if (de != NULL) {
+            if (de != NULL && !nx) {
                 curobj = dictGetKey(de);
                 curscore = *(double*)dictGetVal(de);
 
@@ -1280,7 +1281,7 @@ void zaddGenericCommand(redisClient *c, int incr) {
                     server.dirty++;
                     updated++;
                 }
-            } else {
+            } else if(!de) {
                 znode = zslInsert(zs->zsl,score,ele);
                 incrRefCount(ele); /* Inserted in skiplist. */
                 redisAssertWithInfo(c,NULL,dictAdd(zs->dict,ele,&znode->score) == DICT_OK);
@@ -1307,11 +1308,15 @@ cleanup:
 }
 
 void zaddCommand(redisClient *c) {
-    zaddGenericCommand(c,0);
+    zaddGenericCommand(c,0,0);
+}
+
+void zaddnxCommand(redisClient *c) {
+    zaddGenericCommand(c,0,1);
 }
 
 void zincrbyCommand(redisClient *c) {
-    zaddGenericCommand(c,1);
+    zaddGenericCommand(c,1,0);
 }
 
 void zremCommand(redisClient *c) {
