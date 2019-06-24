@@ -65,6 +65,10 @@ ifeq ($(USE_JEMALLOC),yes)
 	MALLOC=jemalloc
 endif
 
+ifeq ($(USE_MIMALLOC),yes)
+	MALLOC=mimalloc
+endif
+
 ifeq ($(USE_JEMALLOC),no)
 	MALLOC=libc
 endif
@@ -143,6 +147,12 @@ ifeq ($(MALLOC),jemalloc)
 	DEPENDENCY_TARGETS+= jemalloc
 	FINAL_CFLAGS+= -DUSE_JEMALLOC -I../deps/jemalloc/include
 	FINAL_LIBS := ../deps/jemalloc/lib/libjemalloc.a $(FINAL_LIBS)
+endif
+
+ifeq ($(MALLOC),mimalloc)
+	DEPENDENCY_TARGETS+= mimalloc
+	FINAL_CFLAGS+= -DUSE_MIMALLOC -I../deps/mimalloc/include
+	FINAL_LIBS := ../deps/mimalloc/libmimalloc.a $(FINAL_LIBS)
 endif
 
 REDIS_CC=$(QUIET_CC)$(CC) $(FINAL_CFLAGS)
