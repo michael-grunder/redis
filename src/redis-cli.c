@@ -929,6 +929,7 @@ static void cliPrintContextError(void) {
 static int isInvalidateReply(redisReply *reply) {
     return reply->type == REDIS_REPLY_PUSH && reply->elements == 2 &&
         reply->element[0]->type == REDIS_REPLY_STRING &&
+        !strncmp(reply->element[0]->str, "invalidate", 10) &&
         reply->element[1]->type == REDIS_REPLY_ARRAY;
 }
 
