@@ -47,6 +47,8 @@
 #include "sds.h"
 #include "win32.h"
 
+int hi_sdsrange(sds s, ssize_t start, ssize_t end);
+
 /* Initial size of our nested reply stack and how much we grow it when needd */
 #define REDIS_READER_STACK_SIZE 9
 
@@ -721,7 +723,7 @@ int redisReaderGetReply(redisReader *r, void **reply) {
     /* Discard part of the buffer when we've consumed at least 1k, to avoid
      * doing unnecessary calls to memmove() in sds.c. */
     if (r->pos >= 1024) {
-        if (sdsrange(r->buf,r->pos,-1) < 0) return REDIS_ERR;
+        if (hi_sdsrange(r->buf,r->pos,-1) < 0) return REDIS_ERR;
         r->pos = 0;
         r->len = sdslen(r->buf);
     }

@@ -37,6 +37,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <limits.h>
 
 #include "hiredis.h"
 #include "net.h"
@@ -62,6 +63,14 @@ static void *createIntegerObject(const redisReadTask *task, long long value);
 static void *createDoubleObject(const redisReadTask *task, double value, char *str, size_t len);
 static void *createNilObject(const redisReadTask *task);
 static void *createBoolObject(const redisReadTask *task, int bval);
+
+
+int hi_sdsrange(sds s, ssize_t start, ssize_t end) {
+    if (sdslen(s) > SSIZE_MAX)
+        return -1;
+    sdsrange(s, start, end);
+    return 0;
+}
 
 /* Default set of functions to build the reply. Keep in mind that such a
  * function returning NULL is interpreted as OOM. */
@@ -976,7 +985,8 @@ int redisBufferWrite(redisContext *c, int *done) {
                 if (c->obuf == NULL)
                     goto oom;
             } else {
-                if (sdsrange(c->obuf,nwritten,-1) < 0) goto oom;
+                if (hi_sdsrange(c->obuf,nwritten,-1) < 0)
+                    goto oom;
             }
         }
     }
