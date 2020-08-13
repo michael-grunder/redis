@@ -52,7 +52,7 @@
 #include <openssl/err.h>
 #include <hiredis_ssl.h>
 #endif
-#include <sds.h> /* use sds.h from hiredis, so that only one set of sds functions will be present in the binary */
+#include "sds.h"
 #include "dict.h"
 #include "adlist.h"
 #include "zmalloc.h"

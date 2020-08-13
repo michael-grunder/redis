@@ -42,7 +42,7 @@
 #include <math.h>
 #include <pthread.h>
 
-#include <sds.h> /* Use hiredis sds. */
+#include "sds.h"
 #include "ae.h"
 #include "hiredis.h"
 #include "adlist.h"
