@@ -272,6 +272,21 @@ static void cliPushHandler(void *, void *);
 
 uint16_t crc16(const char *buf, int len);
 
+static void *zcalloc_passthru(size_t nmemb, size_t size) {
+    return zcalloc(nmemb * size);
+}
+
+static char *strdup_passthru(const char *str) {
+    size_t len;
+    char *dup;
+
+    len = strlen(str) + 1;
+    dup = zmalloc(len);
+    memcpy(dup, str, len);
+
+    return dup;
+}
+
 static long long ustime(void) {
     struct timeval tv;
     long long ust;
@@ -8086,6 +8101,20 @@ static sds askPassword() {
     return auth;
 }
 
+/* Use redis' allocators for hiredis as we directly interact with some
+ * of the underlying buffers (e.g. for --rdb mode) */
+static void overrideHiredisAllocators() {
+    hiredisAllocFuncs redisCliHiredisAllocFns = {
+        .mallocFn = zmalloc,
+        .callocFn = zcalloc_passthru,
+        .reallocFn = zrealloc,
+        .strdupFn = strdup_passthru,
+        .freeFn = zfree,
+    };
+
+    hiredisSetAllocators(&redisCliHiredisAllocFns);
+}
+
 /*------------------------------------------------------------------------------
  * Program main()
  *--------------------------------------------------------------------------- */
@@ -8166,6 +8195,9 @@ int main(int argc, char **argv) {
     argv += firstarg;
 
     parseEnv();
+
+    /* We want Hiredis to use Redis' allocators */
+    overrideHiredisAllocators();
 
     if (config.askpass) {
         config.auth = askPassword();
